@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  fortune-backend:
+    build:
+      context: ./backend
+    image: localhost/fortune-backend:latest
+    container_name: fortune-backend
+    environment:
+      API_URL: "https://api.adviceslip.com/advice"
+    volumes:
+      - ./fortune_logs/backend:/var/log/fortune_backend
+    networks:
+      - fortune-net
+
+  fortune-frontend:
+    build:
+      context: ./frontend
+    image: localhost/fortune-frontend:latest
+    container_name: fortune-frontend
+    volumes:
+      - ./fortune_logs/frontend:/var/log/nginx
+    ports:
+      - "8000:80"
+      - "8080:8080"
+    networks:
+      - fortune-net
+
+networks:
+  fortune-net:
+    driver: bridge
