@@ -24,12 +24,18 @@ spec:
         app.kubernetes.io/part-of: fortune-cookie
         app.kubernetes.io/version: "1.0"
     spec:
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
       containers:
         - name: fortune-frontend
-          image: k3d-k3d-registry.local:5000/fortune-frontend:1.0
+          image: localhost:5000/fortune-frontend:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
           resources:
             requests:
               cpu: 50m
@@ -51,7 +57,3 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 20
             failureThreshold: 3
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 101
-            allowPrivilegeEscalation: false
