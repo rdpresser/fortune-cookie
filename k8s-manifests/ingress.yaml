@@ -4,8 +4,13 @@ kind: Ingress
 metadata:
   name: fortune-cookie-ingress
   namespace: default
+  labels:
+    app.kubernetes.io/name: fortune-cookie-ingress
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: fortune-cookie
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
   - host: fortune-cookie.local
@@ -15,7 +20,14 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: frontend
+            name: fortune-frontend
             port:
               number: 80
+      - path: /fortune
+        pathType: Prefix
+        backend:
+          service:
+            name: fortune-backend
+            port:
+              number: 8080
 

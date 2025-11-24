@@ -1,21 +1,19 @@
----
 apiVersion: v1
 kind: Service
 metadata:
-  name: fortune-frontend
+  name: fortune-backend
   namespace: default
   labels:
-    app.kubernetes.io/name: fortune-frontend
+    app.kubernetes.io/name: fortune-backend
     app.kubernetes.io/instance: fortune-cookie
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: backend
     app.kubernetes.io/part-of: fortune-cookie
 spec:
   selector:
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: backend
     app.kubernetes.io/instance: fortune-cookie
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 8080
+      targetPort: 8080
   type: ClusterIP
-
