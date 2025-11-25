@@ -1,0 +1,264 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-backend
+    app.kubernetes.io/part-of: fortune-cookie
+    environment: dev
+  name: fortune-backend
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: fortune-cookie
+    environment: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-frontend
+    app.kubernetes.io/part-of: fortune-cookie
+    environment: dev
+  name: fortune-frontend
+  namespace: default
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: fortune-cookie
+    environment: dev
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-backend
+    app.kubernetes.io/part-of: fortune-cookie
+    app.kubernetes.io/version: "1.0"
+    environment: dev
+  name: fortune-backend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+      app.kubernetes.io/instance: fortune-cookie
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/instance: fortune-cookie
+        app.kubernetes.io/name: fortune-backend
+        app.kubernetes.io/part-of: fortune-cookie
+        app.kubernetes.io/version: "1.0"
+        environment: dev
+    spec:
+      containers:
+      - env:
+        - name: API_URL
+          value: https://api.adviceslip.com/advice
+        image: localhost:5000/fortune-backend:1.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /fortune
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 10
+        name: fortune-backend
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /fortune
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /var/log/fortune_backend
+          name: logs
+      volumes:
+      - emptyDir: {}
+        name: logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-frontend
+    app.kubernetes.io/part-of: fortune-cookie
+    app.kubernetes.io/version: "1.0"
+    environment: dev
+  name: fortune-frontend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+      app.kubernetes.io/instance: fortune-cookie
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/instance: fortune-cookie
+        app.kubernetes.io/name: fortune-frontend
+        app.kubernetes.io/part-of: fortune-cookie
+        app.kubernetes.io/version: "1.0"
+        environment: dev
+    spec:
+      containers:
+      - image: localhost:5000/fortune-frontend:1.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        name: fortune-frontend
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 250m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        volumeMounts:
+        - mountPath: /var/cache/nginx
+          name: nginx-cache
+      volumes:
+      - emptyDir: {}
+        name: nginx-cache
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-backend
+    app.kubernetes.io/part-of: fortune-cookie
+    environment: dev
+  name: fortune-backend-hpa
+  namespace: default
+spec:
+  maxReplicas: 5
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fortune-backend
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-frontend
+    app.kubernetes.io/part-of: fortune-cookie
+    environment: dev
+  name: fortune-frontend-hpa
+  namespace: default
+spec:
+  maxReplicas: 5
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fortune-frontend
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  labels:
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/instance: fortune-cookie
+    app.kubernetes.io/name: fortune-cookie-ingress
+    app.kubernetes.io/part-of: fortune-cookie
+    environment: dev
+  name: fortune-cookie-ingress
+  namespace: default
+spec:
+  rules:
+  - host: fortune-cookie.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: fortune-frontend
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+      - backend:
+          service:
+            name: fortune-backend
+            port:
+              number: 8080
+        path: /fortune
+        pathType: Prefix

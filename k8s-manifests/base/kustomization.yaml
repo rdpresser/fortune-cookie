@@ -8,5 +8,3 @@ resources:
   - ingress/ingress.yaml
   - hpa/backend-hpa.yaml
   - hpa/frontend-hpa.yaml
-commonLabels:
-  app.kubernetes.io/instance: fortune-cookie
